@@ -1,0 +1,14 @@
+---
+version: "3.8"
+
+services:
+  backup:
+    image: ${POSTGRESQL_IMAGE}
+    entrypoint: /usr/local/bin/backup.sh
+    command: zammad-backup
+    env_file:
+      - ../.env
+    volumes:
+      - zammad_backup:/var/tmp/zammad
+      - zammad_data:/opt/zammad
+    restart: unless-stopped

@@ -1,0 +1,16 @@
+---
+version: "3.8"
+
+services:
+  traefik:
+    extends:
+      file: services/traefik.yml
+      service: traefik
+
+  nginx:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cloud.rule=Host(`${TRAEFIK_DOMAIN}`)
+      - traefik.http.routers.cloud.entrypoints=websecure
+      - traefik.http.routers.cloud.tls.certresolver=leresolver
+      - traefik.http.services.cloud.loadbalancer.server.port=8080

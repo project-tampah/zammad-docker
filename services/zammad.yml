@@ -1,0 +1,11 @@
+---
+version: "3.8"
+
+services:
+  zammad-base:
+    image: ${ZAMMAD_IMAGE}
+    env_file:
+      - ../.env
+    volumes:
+      - zammad_data:/opt/zammad
+    restart: unless-stopped

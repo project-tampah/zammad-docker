@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: ${TRAEFIK_IMAGE}
+    command:
+      - --log.level=${TRAEFIK_LOG_LEVEL}
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      # Redirect all http traffic to https
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      # Lets Encrypt
+      - --certificatesresolvers.leresolver.acme.dnschallenge=true
+      - --certificatesresolvers.leresolver.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.leresolver.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.leresolver.acme.storage=/letsencrypt/acme.json
+      # tls for websecure listener
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=leresolver
+      - --entrypoints.websecure.http.tls.domains[0].main=${TRAEFIK_DOMAIN}
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+    environment:
+      - CLOUDFLARE_DNS_API_TOKEN=${TRAEFIK_CLOUDFLARE_DNS_API_TOKEN}
+    volumes:
+      - ../letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped

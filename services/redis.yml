@@ -1,0 +1,7 @@
+---
+version: "3.8"
+
+services:
+  redis:
+    image: ${REDIS_IMAGE}
+    restart: unless-stopped

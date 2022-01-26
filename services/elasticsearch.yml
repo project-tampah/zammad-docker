@@ -1,0 +1,14 @@
+---
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: ${ELASTICSEARCH_IMAGE}
+    env_file:
+      - ../.env
+    environment:
+      # run as single-node cluster
+      - discovery.type=single-node
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped

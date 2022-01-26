@@ -1,0 +1,65 @@
+---
+version: "3.8"
+
+services:
+  elasticsearch:
+    extends:
+      file: services/elasticsearch.yml
+      service: elasticsearch
+
+  postgresql:
+    extends:
+      file: services/postgresql.yml
+      service: postgresql
+
+  memcached:
+    extends:
+      file: services/memcached.yml
+      service: memcached
+
+  redis:
+    extends:
+      file: services/redis.yml
+      service: redis
+
+  init:
+    extends:
+      file: services/zammad.yml
+      service: zammad-base
+    command: zammad-init
+    restart: on-failure
+
+  railsserver:
+    extends:
+      file: services/zammad.yml
+      service: zammad-base
+    command: zammad-railsserver
+
+  nginx:
+    extends:
+      file: services/zammad.yml
+      service: zammad-base
+    command: zammad-nginx
+
+  scheduler:
+    extends:
+      file: services/zammad.yml
+      service: zammad-base
+    command: zammad-scheduler
+
+  websocket:
+    extends:
+      file: services/zammad.yml
+      service: zammad-base
+    command: zammad-websocket
+
+  backup:
+    extends:
+      file: services/backup.yml
+      service: backup
+
+volumes:
+  postgresql_data:
+  elasticsearch_data:
+  zammad_data:
+  zammad_backup:

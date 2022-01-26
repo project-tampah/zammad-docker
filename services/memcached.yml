@@ -1,0 +1,8 @@
+---
+version: "3.8"
+
+services:
+  memcached:
+    image: ${MEMCACHED_IMAGE}
+    command: memcached -m 256M
+    restart: unless-stopped

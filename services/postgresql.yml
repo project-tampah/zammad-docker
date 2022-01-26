@@ -1,0 +1,11 @@
+---
+version: "3.8"
+
+services:
+  postgresql:
+    image: ${POSTGRESQL_IMAGE}
+    env_file:
+      - ../.env
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    restart: unless-stopped

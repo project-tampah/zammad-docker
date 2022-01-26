@@ -1,0 +1,36 @@
+name: build
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build-zammad-base:
+    uses: project-tampah/zammad-test/.github/workflows/build-template.yml@master
+    with:
+      dockerfile: ./docker/zammad/Dockerfile
+      dockerrepo: projecttampah/zammad-test
+      dockertag: zammad-latest
+    secrets:
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+
+  build-zammad-postgresql:
+    uses: project-tampah/zammad-test/.github/workflows/build-template.yml@master
+    with:
+      dockerfile: ./docker/postgresql/Dockerfile
+      dockerrepo: projecttampah/zammad-test
+      dockertag: postgresql-latest
+    secrets:
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+
+  build-zammad-elasticsearch:
+    uses: project-tampah/zammad-test/.github/workflows/build-template.yml@master
+    with:
+      dockerfile: ./docker/elasticsearch/Dockerfile
+      dockerrepo: projecttampah/zammad-test
+      dockertag: elasticsearch-latest
+    secrets:
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
