@@ -16,6 +16,8 @@ ENV ZAMMAD_READY_FILE ${ZAMMAD_DIR}/tmp/zammad.ready
 ENV ZAMMAD_TMP_DIR /tmp/zammad-${GIT_BRANCH}
 ENV ZAMMAD_USER zammad
 
+SHELL ["/bin/bash", "-e", "-o", "pipefail", "-c"]
+
 # install zammad
 COPY ./docker/zammad/setup.sh /tmp
 RUN chmod +x /tmp/setup.sh && /tmp/setup.sh builder

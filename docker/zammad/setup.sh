@@ -3,7 +3,7 @@ set -e
 
 # install dependencies
 if [ "$1" = 'builder' ]; then
-  PACKAGES="build-essential curl git libimlib2-dev libpq-dev nodejs shared-mime-info"
+  PACKAGES="build-essential curl git libimlib2-dev libpq-dev shared-mime-info"
 elif [ "$1" = 'runner' ]; then
   PACKAGES="curl libimlib2 libpq5 nginx rsync"
 fi
@@ -11,6 +11,21 @@ fi
 apt-get update
 apt-get upgrade -y
 apt-get install -y --no-install-recommends ${PACKAGES}
+
+if [ "$1" = 'builder' ]; then
+  # Install Node.js 16 repository from Nodesource
+  apt-get --no-install-recommends -y install gnupg
+  KEYRING=/usr/share/keyrings/nodesource.gpg
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | tee "$KEYRING" >/dev/null
+  cat - >/etc/apt/sources.list.d/nodesource.list <<NODESOURCE_LIST
+deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x buster main
+NODESOURCE_LIST
+
+  apt-get update
+  apt-get --no-install-recommends -y install nodejs
+  npm -g install yarn
+fi
+
 rm -rf /var/lib/apt/lists/*
 
 # install zammad
@@ -25,7 +40,6 @@ if [ "$1" = 'builder' ]; then
   cd "${ZAMMAD_TMP_DIR}"
   bundle config set without 'test development mysql'
   bundle install
-  contrib/packager.io/fetch_locales.rb
   sed -e 's#.*adapter: postgresql#  adapter: nulldb#g' -e 's#.*username:.*#  username: postgres#g' -e 's#.*password:.*#  password: \n  host: ${POSTGRES_HOST}\n#g' <contrib/packager.io/database.yml.pkgr >config/database.yml
   sed -i "/require 'rails\/all'/a require\ 'nulldb'" config/application.rb
   sed -i 's/.*scheduler_\(err\|out\).log.*//g' script/scheduler.rb
