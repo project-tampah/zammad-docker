@@ -1,4 +1,4 @@
-FROM postgres:14.1-alpine
+FROM postgres:14.2-alpine
 
 # copy backup script
 COPY ./docker/postgresql/backup.sh /usr/local/bin/
