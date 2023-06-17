@@ -9,6 +9,13 @@ services:
     environment:
       # run as single-node cluster
       - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - http.max_content_length=400mb
+      - indices.query.bool.max_clause_count=2000
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     restart: unless-stopped
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
