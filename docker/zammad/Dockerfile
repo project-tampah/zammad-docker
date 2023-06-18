@@ -14,7 +14,7 @@ SHELL ["/bin/bash", "-e", "-o", "pipefail", "-c"]
 
 WORKDIR ${ZAMMAD_DIR}
 COPY . .
-RUN contrib/docker/setup.sh builder
+RUN docker/zammad/setup.sh builder
 
 
 # note: zammad is currently incompatible to alpine because of:
@@ -30,8 +30,8 @@ WORKDIR ${ZAMMAD_DIR}
 COPY --from=builder ${ZAMMAD_DIR} .
 
 COPY --from=builder /usr/local/bundle /usr/local/bundle
-COPY --from=builder ${ZAMMAD_DIR}/contrib/docker/docker-entrypoint.sh /
-RUN contrib/docker/setup.sh runner
+COPY --from=builder docker/zammad/docker-entrypoint.sh /
+RUN docker/zammad/setup.sh runner
 USER zammad:zammad
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
