@@ -2,18 +2,33 @@
 
 set -e
 
+: "${AUTOWIZARD_JSON:=''}"
+: "${ELASTICSEARCH_ENABLED:=true}"
+: "${ELASTICSEARCH_HOST:=elasticsearch}"
+: "${ELASTICSEARCH_PORT:=9200}"
+: "${ELASTICSEARCH_SCHEMA:=http}"
+: "${ELASTICSEARCH_NAMESPACE:=zammad}"
+: "${ELASTICSEARCH_REINDEX:=true}"
+: "${ELASTICSEARCH_SSL_VERIFY:=true}"
+: "${NGINX_PORT:=8080}"
+: "${NGINX_SERVER_NAME:=_}"
+: "${NGINX_SERVER_SCHEME:=\$scheme}"
+: "${RAILS_ENV:=production}"
+: "${RAILS_LOG_TO_STDOUT:=true}"
+: "${RAILS_TRUSTED_PROXIES:=['127.0.0.1', '::1']}"
+: "${RSYNC_ADDITIONAL_PARAMS:=--no-perms --no-owner}"
+: "${ZAMMAD_DIR:=/opt/zammad}"
+: "${ZAMMAD_RAILSSERVER_HOST:=zammad-railsserver}"
+: "${ZAMMAD_RAILSSERVER_PORT:=3000}"
+: "${ZAMMAD_READY_FILE:=${ZAMMAD_DIR}/tmp/zammad.ready}"
+: "${ZAMMAD_WEBSOCKET_HOST:=zammad-websocket}"
+: "${ZAMMAD_WEBSOCKET_PORT:=6042}"
+: "${ZAMMAD_WEB_CONCURRENCY:=0}"
+
 function check_zammad_ready {
-  # first we wait 15 seconds to give some time to the init container
   sleep 15
-
-  count=0
   until [ -f "${ZAMMAD_READY_FILE}" ]; do
-    ((count = count + 1))
-
-    if [ $(expr $count % 3) == "0" ]; then
-      echo "waiting for init container to finish install or update..."
-    fi
-
+    echo "waiting for init container to finish install or update..."
     sleep 10
   done
 }
@@ -22,15 +37,11 @@ function check_zammad_ready {
 if [ "$1" = 'zammad-init' ]; then
   # install / update zammad
   test -f "${ZAMMAD_READY_FILE}" && rm "${ZAMMAD_READY_FILE}"
-  rsync -a ${RSYNC_ADDITIONAL_PARAMS} --delete --exclude 'public/assets/images/*' --exclude 'storage/fs/*' "${ZAMMAD_TMP_DIR}/" "${ZAMMAD_DIR}"
-  rsync -a ${RSYNC_ADDITIONAL_PARAMS} "${ZAMMAD_TMP_DIR}"/public/assets/images/ "${ZAMMAD_DIR}"/public/assets/images
 
   until (echo >/dev/tcp/"${POSTGRES_HOST}"/"${POSTGRES_PORT}") &>/dev/null; do
     echo "zammad railsserver waiting for postgresql server to be ready..."
     sleep 5
   done
-
-  cd "${ZAMMAD_DIR}"
 
   # configure database
   # https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern
@@ -50,16 +61,17 @@ if [ "$1" = 'zammad-init' ]; then
     bundle exec rake db:seed
 
     # create autowizard.json on first install
-    if [[ -n "$AUTOWIZARD_JSON" && `base64 -d <<<${AUTOWIZARD_JSON}` ]]; then
+    if base64 -d <<<${AUTOWIZARD_JSON} &>>/dev/null; then
       echo "Saving autowizard json payload..."
       base64 -d <<<"${AUTOWIZARD_JSON}" >auto_wizard.json
     fi
   else
-    bundle exec rails r "Cache.clear"
+    bundle exec rails r "Rails.cache.clear"
     bundle exec rake db:migrate
   fi
 
-  echo "configuring elasticsearch..."
+  # es config
+  echo "changing settings..."
   if [ "${ELASTICSEARCH_ENABLED}" == "false" ]; then
     bundle exec rails r "Setting.set('es_url', '')"
   else
@@ -84,8 +96,8 @@ if [ "$1" = 'zammad-init' ]; then
     fi
 
     if [ "${ELASTICSEARCH_REINDEX}" == "true" ]; then
-      if ! curl -s "${SSL_SKIP_VERIFY}" "${ELASTICSEARCH_SCHEMA}://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}/_cat/indices" | grep -q ${ELASTICSEARCH_NAMESPACE}; then
-        echo "rebuilding elasticsearch index..."
+      if ! curl -s "${SSL_SKIP_VERIFY}" "${ELASTICSEARCH_SCHEMA}://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}/_cat/indices" | grep -q zammad; then
+        echo "rebuilding es searchindex..."
         bundle exec rake zammad:searchindex:rebuild
       fi
     fi
@@ -93,7 +105,6 @@ if [ "$1" = 'zammad-init' ]; then
 
   # create install ready file
   echo 'zammad-init' >"${ZAMMAD_READY_FILE}"
-  echo "zammad init done!"
 fi
 
 # zammad nginx
@@ -118,9 +129,9 @@ if [ "$1" = 'zammad-railsserver' ]; then
 
   check_zammad_ready
 
-  cd "${ZAMMAD_DIR}"
-
   echo "starting railsserver... with WEB_CONCURRENCY=${ZAMMAD_WEB_CONCURRENCY}"
+
+  #shellcheck disable=SC2101
   exec bundle exec puma -b tcp://[::]:"${ZAMMAD_RAILSSERVER_PORT}" -w "${ZAMMAD_WEB_CONCURRENCY}" -e "${RAILS_ENV}"
 fi
 
@@ -128,17 +139,14 @@ fi
 if [ "$1" = 'zammad-scheduler' ]; then
   check_zammad_ready
 
-  cd "${ZAMMAD_DIR}"
+  echo "starting background services..."
 
-  echo "starting scheduler..."
-  exec bundle exec script/scheduler.rb run
+  exec bundle exec script/background-worker.rb start
 fi
 
 # zammad-websocket
 if [ "$1" = 'zammad-websocket' ]; then
   check_zammad_ready
-
-  cd "${ZAMMAD_DIR}"
 
   echo "starting websocket server..."
   exec bundle exec script/websocket-server.rb -b 0.0.0.0 -p "${ZAMMAD_WEBSOCKET_PORT}" start
